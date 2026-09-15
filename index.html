@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌸 植物のつくりとふえ方クイズ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+:root {
+  --primary: #9b3f6e;
+  --primary-light: #b9799a;
+  --primary-dark: #652948;
+  --accent: #8a1e5a;
+  --gold: #c8a000;
+  --gold-dark: #8a6e00;
+  --parchment: #fdf8ed;
+  --parchment2: #f0e4c0;
+  --ink: #1e150a;
+  --success: #2e7d32;
+  --danger: #c62828;
+  --shadow: 0 4px 24px rgba(101,41,72,0.25);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #16090f;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 48px;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(155,63,110,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(185,121,154,0.18) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(185,121,154,0.03) 44px, rgba(185,121,154,0.03) 45px),
+    #16090f;
+  pointer-events: none; z-index: 0;
+}
+
+#hud {
+  position: sticky; top: 0; z-index: 100;
+  width: 100%; max-width: 540px;
+  background: linear-gradient(135deg, #16090f 0%, #28101d 100%);
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 16px 8px; display: none;
+}
+.hud-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.hud-level { font-family:'Kaisei Decol',serif; font-size:0.95rem; color:var(--primary-light); font-weight:700; }
+.hud-title-badge { font-size:0.7rem; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; padding:2px 10px; border-radius:999px; font-weight:700; }
+.hud-score-chips { display:flex; gap:8px; }
+.hud-chip { font-size:0.78rem; font-weight:700; padding:2px 10px; border-radius:999px; }
+.hud-chip.ok { background:rgba(46,125,50,0.25); color:#81c784; }
+.hud-chip.ng { background:rgba(198,40,40,0.25); color:#ef9a9a; }
+.exp-bar-wrap { display:flex; align-items:center; gap:8px; }
+.exp-label { font-size:0.7rem; color:var(--primary-light); white-space:nowrap; }
+.exp-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; }
+.exp-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary-light)); border-radius:999px; transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+
+#levelup-overlay {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:rgba(18,12,2,0.9);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+}
+#levelup-overlay.show { display:flex; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+.levelup-ring {
+  width:160px; height:160px; border-radius:50%;
+  background:radial-gradient(circle,rgba(160,124,58,0.3) 0%,transparent 70%);
+  display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+  animation:ringPulse 1s ease-in-out infinite;
+}
+@keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(160,124,58,0.4);}50%{box-shadow:0 0 0 20px rgba(160,124,58,0);} }
+.levelup-emoji { font-size:5rem; }
+.levelup-text { font-family:'Kaisei Decol',serif; color:var(--primary-light); font-size:2rem; font-weight:700; text-shadow:0 0 20px rgba(160,124,58,0.8); margin-bottom:8px; }
+.levelup-level { font-size:1rem; color:#c49a5a; margin-bottom:12px; }
+.levelup-title { font-size:1.1rem; color:var(--primary-light); background:rgba(160,124,58,0.1); border:1px solid rgba(160,124,58,0.3); padding:8px 24px; border-radius:999px; margin-bottom:24px; }
+.btn-levelup-ok { padding:12px 40px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#title-overlay {
+  display:none; position:fixed; inset:0; z-index:998;
+  background:rgba(18,12,2,0.92);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px;
+}
+#title-overlay.show { display:flex; animation:fadeIn 0.4s ease; }
+.title-scroll { background:var(--parchment); border:3px solid var(--primary); border-radius:8px; padding:32px 28px; max-width:320px; width:100%; }
+.title-scroll::before { content:'✦ ✦ ✦'; font-size:0.7rem; color:var(--primary); letter-spacing:6px; display:block; margin-bottom:16px; }
+.title-new { font-size:0.75rem; color:var(--danger); font-weight:700; letter-spacing:0.1em; }
+.title-main { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--ink); margin:8px 0; }
+.title-emoji { font-size:2.5rem; margin:8px 0; }
+.title-desc { font-size:0.85rem; color:#5a3a1a; line-height:1.6; margin-top:8px; }
+.btn-title-ok { margin-top:20px; padding:10px 32px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#intro-screen { width:100%; display:flex; flex-direction:column; align-items:center; padding:48px 16px 60px; position:relative; z-index:1; }
+.intro-emblem { font-size:5rem; margin-bottom:8px; filter:drop-shadow(0 4px 16px rgba(160,124,58,0.5)); animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);} }
+.intro-title { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--primary-light); text-shadow:0 2px 12px rgba(160,124,58,0.4); margin-bottom:4px; text-align:center; }
+.intro-sub { color:#b9799a; font-size:0.85rem; margin-bottom:28px; text-align:center; }
+.intro-card { width:100%; max-width:340px; background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:28px; text-align:center; }
+.intro-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:16px; }
+.itag { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; background:rgba(92,74,30,0.12); color:var(--primary-dark); border:1px solid rgba(92,74,30,0.25); }
+.intro-desc { font-size:0.88rem; color:#5a3a1a; line-height:1.8; }
+.btn-start { padding:16px 48px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:8px; font-family:'Kaisei Decol',serif; font-size:1.2rem; font-weight:700; cursor:pointer; box-shadow:0 4px 20px rgba(160,124,58,0.4); transition:all 0.2s; letter-spacing:0.05em; }
+.btn-start:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(160,124,58,0.5); }
+
+#quiz-screen { display:none; width:100%; max-width:540px; padding:16px 0 0; position:relative; z-index:1; }
+.section-badge { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.7rem; font-weight:700; padding:3px 14px; border-radius:999px; margin-bottom:8px; letter-spacing:0.05em; }
+.q-card { background:var(--parchment); border-radius:6px; padding:28px 20px 20px; box-shadow:var(--shadow),inset 0 0 0 1px rgba(92,74,30,0.18); border-top:3px solid var(--primary); margin:0 16px; animation:cardIn 0.35s cubic-bezier(.4,0,.2,1); }
+@keyframes cardIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.q-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.q-num { font-size:0.75rem; color:var(--primary); }
+.q-type-badge { font-size:0.68rem; padding:2px 8px; border-radius:999px; font-weight:700; }
+.q-type-badge.choice { background:#fff8e1; color:var(--gold-dark); }
+.q-type-badge.text   { background:var(--parchment2); color:var(--primary-dark); }
+.q-text { font-family:'Kaisei Decol',serif; font-size:1.05rem; line-height:1.7; color:var(--ink); margin-bottom:18px; }
+
+.choices { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.choice-btn { width:100%; padding:12px 16px; border:2px solid rgba(92,74,30,0.2); border-radius:6px; background:white; font-size:0.93rem; text-align:left; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans JP',sans-serif; color:var(--ink); position:relative; }
+.choice-btn:hover:not(:disabled) { border-color:var(--primary); background:var(--parchment2); transform:translateX(4px); }
+.choice-btn.correct  { border-color:var(--success); background:#e8f5e9; color:#1b5e20; font-weight:700; }
+.choice-btn.wrong    { border-color:var(--danger);  background:#ffebee; color:#b71c1c; font-weight:700; }
+.choice-btn.show-ans { border-color:var(--success); background:#e8f5e9; color:#1b5e20; }
+.choice-btn:disabled { cursor:default; }
+.c-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); }
+
+.text-input-area { margin-bottom:10px; }
+.text-input-area input { width:100%; padding:12px 14px; border:2px solid rgba(92,74,30,0.22); border-radius:6px; font-size:1rem; font-family:'Noto Sans JP',sans-serif; outline:none; background:white; transition:border-color 0.2s; color:var(--ink); }
+.text-input-area input:focus { border-color:var(--primary); }
+.text-input-area input.correct { border-color:var(--success); background:#e8f5e9; }
+.text-input-area input.wrong   { border-color:var(--danger);  background:#ffebee; }
+
+.hint-row { margin:6px 0; }
+.hint-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 14px; background:rgba(200,160,0,0.1); border:1.5px dashed var(--gold-dark); border-radius:999px; font-size:0.78rem; color:#7a6000; cursor:pointer; font-family:'Noto Sans JP',sans-serif; font-weight:700; transition:background 0.2s; }
+.hint-btn:hover { background:rgba(200,160,0,0.2); }
+.hint-btn:disabled { opacity:0.5; cursor:default; }
+.hint-box { display:none; margin-top:6px; padding:8px 12px; background:rgba(200,160,0,0.08); border-left:3px solid var(--gold-dark); border-radius:4px; font-size:0.8rem; color:#7a6000; }
+.hint-box.show { display:block; animation:slideIn 0.2s ease; }
+
+.feedback { display:none; padding:12px 14px; border-radius:6px; margin-bottom:12px; font-size:0.88rem; line-height:1.65; animation:slideIn 0.3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+.feedback.correct { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--success); }
+.feedback.wrong   { background:#ffebee; color:#b71c1c; border-left:4px solid var(--danger); }
+.feedback.show { display:block; }
+.fb-title { font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+.fb-exp { font-size:0.8rem; margin-top:4px; }
+.fb-explain { font-size:0.83rem; color:#555; margin-top:6px; line-height:1.6; }
+
+.btn { width:100%; padding:13px; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; box-shadow:0 3px 12px rgba(160,124,58,0.3); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(160,124,58,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#5d1a1a,var(--accent)); color:white; }
+.btn:disabled { opacity:0.6; cursor:default; transform:none !important; }
+
+#result-screen { display:none; width:100%; max-width:540px; padding:40px 16px 60px; position:relative; z-index:1; text-align:center; }
+.result-emblem { font-size:4rem; margin-bottom:12px; }
+.result-title { font-family:'Kaisei Decol',serif; font-size:1.5rem; color:var(--primary-light); margin-bottom:4px; }
+.result-title-display { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.9rem; font-weight:700; padding:4px 16px; border-radius:999px; margin-bottom:16px; }
+.result-card { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:16px; }
+.result-score { font-family:'Kaisei Decol',serif; font-size:3rem; color:var(--ink); font-weight:700; }
+.result-score span { font-size:1rem; color:var(--primary); font-weight:400; }
+.result-level-row { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+.rl-item { text-align:center; }
+.rl-label { font-size:0.7rem; color:var(--primary); }
+.rl-val { font-size:1.2rem; font-weight:700; color:var(--ink); }
+.result-msg { font-size:0.9rem; color:#5a3a1a; line-height:1.7; margin:12px 0; }
+.result-table { width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; margin-top:12px; }
+.result-table th { background:rgba(92,74,30,0.1); padding:7px 10px; color:#5a3a1a; font-weight:700; }
+.result-table td { padding:7px 10px; border-bottom:1px solid rgba(92,74,30,0.1); }
+.result-table .ok  { color:var(--success); font-weight:700; }
+.result-table .bad { color:var(--danger);  font-weight:700; }
+.title-collection { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:16px; margin-bottom:16px; }
+.tc-header { font-family:'Kaisei Decol',serif; font-size:1rem; color:var(--ink); margin-bottom:10px; }
+.tc-grid { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.tc-badge { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; }
+.tc-badge.earned { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; }
+.tc-badge.locked { background:rgba(92,74,30,0.1); color:#b09060; border:1px dashed rgba(92,74,30,0.25); }
+.stars { font-size:1.8rem; letter-spacing:4px; margin:8px 0; }
+.result-btns { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+
+/* ===== 称号獲得 派手演出 ===== */
+#title-overlay.show .title-scroll{ animation:titlePop .6s cubic-bezier(.34,1.7,.5,1) both, titleGlow2 1.4s .6s ease-in-out infinite; box-shadow:0 0 0 4px rgba(255,215,0,.3),0 14px 50px rgba(0,0,0,.5); }
+@keyframes titlePop{0%{transform:scale(.3) rotate(-10deg);opacity:0;}60%{transform:scale(1.08) rotate(3deg);}100%{transform:scale(1) rotate(0);opacity:1;}}
+@keyframes titleGlow2{0%,100%{box-shadow:0 0 0 4px rgba(255,215,0,.3),0 14px 50px rgba(0,0,0,.5);}50%{box-shadow:0 0 0 12px rgba(255,215,0,.55),0 14px 64px rgba(255,180,0,.55);}}
+#title-overlay.show .title-emoji{ animation:titleEmojiPop .8s ease both; }
+@keyframes titleEmojiPop{0%{transform:scale(0) rotate(-180deg);}70%{transform:scale(1.35) rotate(12deg);}100%{transform:scale(1) rotate(0);}}
+.tap-hint{ font-size:.7rem; opacity:.55; margin-top:10px; }
+.confetti-piece{ position:fixed; top:-12vh; width:10px; height:14px; border-radius:2px; opacity:.95; z-index:1200; pointer-events:none; animation:confettiFall linear forwards; }
+@keyframes confettiFall{ to{ transform:translateY(120vh) rotate(720deg); } }
+.title-collection{display:none !important;} #title-overlay{display:none !important;}
+.intro-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+.itag{flex:0 1 calc(50% - 3px);box-sizing:border-box;text-align:center;}
+.itag-full{flex-basis:100%;}
+#qa-popup{display:none;position:fixed;inset:0;z-index:1100;background:rgba(5,17,31,.75);align-items:center;justify-content:center;padding:24px;}
+#qa-popup.show{display:flex;}
+.qa-popup-box{background:#fff;border:2px solid var(--primary);border-radius:10px;padding:20px 18px;max-width:420px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.qa-popup-text{font-size:0.9rem;color:var(--ink);line-height:1.7;white-space:pre-wrap;word-break:break-word;text-align:left;}
+.qa-popup-close{margin-top:16px;width:100%;padding:10px;background:linear-gradient(135deg,var(--primary-dark),var(--primary-light));color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;}
+.result-table td.q-cell{cursor:pointer;color:var(--primary-dark);text-decoration:underline dotted;}
+.exp-col-btn{font-size:0.74rem;padding:3px 10px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#a07020;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;}
+.itag{word-break:keep-all;overflow-wrap:anywhere;} /* itag-nobreak */
+.itag{white-space:nowrap;overflow:hidden;padding-left:6px;padding-right:6px;} /* itag-oneline */
+.intro-title{margin-bottom:24px !important;} /* intro-sub-removed */
+</style>
+</head>
+<body>
+
+<div id="levelup-overlay">
+  <div class="levelup-ring"><div class="levelup-emoji">🏯</div></div>
+  <div class="levelup-text">LEVEL UP！</div>
+  <div class="levelup-level" id="lu-level">Lv.2 になった！</div>
+  <div class="levelup-title" id="lu-title"></div>
+  <button class="btn-levelup-ok" onclick="closeLevelup()">よし！続けるぞ ▶</button>
+</div>
+
+<div id="title-overlay" onclick="closeTitleOverlay()">
+  <div class="title-scroll" onclick="event.stopPropagation()">
+    <div class="title-new">🎊 称号獲得！</div>
+    <div class="title-emoji" id="to-emoji">🏯</div>
+    <div class="title-main" id="to-title"></div>
+    <div class="title-desc" id="to-desc"></div>
+    <button class="btn-title-ok" onclick="closeTitleOverlay()">受け取る！ ✨</button>
+    <div class="tap-hint">画面をタップでとじる</div>
+  </div>
+</div>
+
+<div id="intro-screen">
+  <div style="height:40px"></div>
+  <div class="intro-emblem">🌸</div>
+  <div class="intro-title">植物のつくりとふえ方<br>クイズ</div>
+  <div class="intro-card">
+    <div class="intro-tags">
+      <span class="itag">花のつくり</span>
+      <span class="itag">植物の分類</span>
+      <span class="itag">双子葉類・単子葉類</span>
+      <span class="itag">受粉と受精</span>
+      <span class="itag">風ばい花</span>
+      <span class="itag">有性生殖・無性生殖</span>
+    </div>
+    <div class="intro-desc">
+      経験値を手に入れてレベルアップ！<br>
+      めざせ全問正解！
+    </div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">スタート！ 🚀</button>
+</div>
+
+<div id="quiz-screen">
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-level" id="hud-level">🔍 Lv.1 理科の見習い</div>
+      <div class="hud-score-chips">
+        <div class="hud-chip ok">✅ <span id="hud-ok">0</span></div>
+        <div class="hud-chip ng">❌ <span id="hud-ng">0</span></div>
+      </div>
+    </div>
+    <div class="exp-bar-wrap">
+      <div class="exp-label" id="exp-text">EXP 0/50</div>
+      <div class="exp-bar-bg"><div class="exp-bar-fill" id="exp-fill" style="width:0%"></div></div>
+      <div class="hud-title-badge" id="hud-title-badge">理科の見習い</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div style="padding:0 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;">
+        <div id="prog-fill" style="height:100%;background:linear-gradient(90deg,var(--primary-dark),var(--primary-light));border-radius:999px;transition:width 0.5s;width:0%"></div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--primary-light);white-space:nowrap;" id="prog-label">0/20</div>
+    </div>
+  </div>
+
+  <div class="q-card" id="q-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span class="section-badge" id="q-section">🌸 植物のつくりとふえ方</span>
+      <div class="q-meta" style="margin-bottom:0;flex:1;">
+        <span class="q-num" id="q-num"></span>
+        <span class="q-type-badge" id="q-type-badge">選択</span>
+      </div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div id="q-image"></div>
+    <div id="choices-wrap"></div>
+    <div id="text-input-wrap" style="display:none">
+      <div class="text-input-area">
+        <input type="text" id="text-ans" placeholder="答えを入力…" autocomplete="off">
+      </div>
+      <div class="hint-row">
+        <button class="hint-btn" id="hint-btn" onclick="showHint()">💡 ヒントを見る</button>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+      <button class="btn btn-secondary" id="submit-btn" onclick="submitText()" style="margin-bottom:10px;">答え合わせ ✔</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none;">次の問題へ →</button>
+  </div>
+  <div style="height:32px"></div>
+</div>
+
+<div id="result-screen">
+  <div class="result-emblem" id="res-emoji">🏆</div>
+  <div class="result-title">クイズ完了！</div>
+  <div class="stars" id="res-stars">⭐⭐⭐</div>
+  <div class="result-title-display" id="res-title-disp">👑 古墳大王</div>
+  <div class="result-card">
+    <div class="result-score" id="res-score">0<span> / 20問正解</span></div>
+    <div class="result-level-row">
+      <div class="rl-item"><div class="rl-label">最終レベル</div><div class="rl-val" id="res-level">Lv.1</div></div>
+      <div class="rl-item"><div class="rl-label">獲得EXP</div><div class="rl-val" id="res-exp">0</div></div>
+      <div class="rl-item"><div class="rl-label">正答率</div><div class="rl-val" id="res-pct">0%</div></div>
+    </div>
+    <div class="result-msg" id="res-msg"></div>
+  </div>
+  <div class="title-collection">
+    <div class="tc-header">📜 称号コレクション</div>
+    <div class="tc-grid" id="tc-grid"></div>
+  </div>
+  <div class="result-card">
+    <table class="result-table">
+      <thead><tr><th>#</th><th>問題</th><th>結果</th><th>解説</th></tr></thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartQuiz()">もう一度やる 🔄</button>
+    <button class="btn btn-secondary" onclick="reviewWrong()" id="review-btn">❌ 間違えた問題だけやる</button>
+  </div>
+</div>
+
+<script>
+const LEVELS = [
+  { lv:1, need:0,   title:'理科の見習い',   emoji:'🔍' },
+  { lv:2, need:30,  title:'観察名人',       emoji:'🌱' },
+  { lv:3, need:80,  title:'実験助手',       emoji:'🧪' },
+  { lv:4, need:150, title:'研究生',         emoji:'📓' },
+  { lv:5, need:250, title:'科学者',         emoji:'🔬' },
+  { lv:6, need:380, title:'博士',           emoji:'🎓' },
+  { lv:7, need:550, title:'理科マスター',   emoji:'🏆' },
+];
+
+const TITLES = [];
+
+let exp=0, currentLevel=1, earnedTitles=[];
+
+function getLevel(e){ let lv=LEVELS[0]; for(const l of LEVELS){ if(e>=l.need) lv=l; } return lv; }
+function addExp(amount){
+  const prev=getLevel(exp); exp+=amount; const next=getLevel(exp); updateHUD();
+  if(next.lv>prev.lv){ showLevelup(next); return true; } return false;
+}
+function updateHUD(){
+  const lv=getLevel(exp); const nextLv=LEVELS.find(l=>l.lv===lv.lv+1);
+  const expInLv=exp-lv.need; const expNeeded=nextLv?nextLv.need-lv.need:999;
+  const pct=nextLv?Math.min((expInLv/expNeeded)*100,100):100;
+  document.getElementById('hud-level').textContent=`${lv.emoji} Lv.${lv.lv} ${lv.title}`;
+  document.getElementById('hud-title-badge').textContent=lv.title;
+  document.getElementById('exp-fill').style.width=pct+'%';
+  document.getElementById('exp-text').textContent=nextLv?`EXP ${expInLv}/${expNeeded}`:'MAX';
+  currentLevel=lv.lv;
+}
+function showLevelup(lv){
+  document.getElementById('lu-level').textContent=`Lv.${lv.lv} になった！`;
+  document.getElementById('lu-title').textContent=`${lv.emoji} 称号「${lv.title}」を獲得！`;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelup(){ document.getElementById('levelup-overlay').classList.remove('show'); }
+let titleCallback=null;
+function showTitleOverlay(t,cb){
+  document.getElementById('to-emoji').textContent=t.emoji;
+  document.getElementById('to-title').textContent=t.name;
+  document.getElementById('to-desc').textContent=t.desc;
+  document.getElementById('title-overlay').classList.add('show');
+  spawnConfetti();
+  titleCallback=cb||null;
+}
+function spawnConfetti(){
+  const colors=['#ffd700','#ff7043','#42a5f5','#66bb6a','#ab47bc','#ec407a'];
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div'); c.className='confetti-piece';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.2+Math.random()*1.3)+'s';
+    c.style.animationDelay=(Math.random()*0.3)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2900);
+  }
+}
+function closeTitleOverlay(){
+  document.getElementById('title-overlay').classList.remove('show');
+  if(titleCallback){ titleCallback(); titleCallback=null; }
+}
+
+const ALL_QUESTIONS = [
+  {"id": 1, "section": "花のつくり", "type": "text", "text": "図は花のつくりを表したものです。花粉をつくる袋のような部分Aを何といいますか。", "qImg": "data:image/jpeg;base64,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", "answers": ["やく", "葯"], "hint": "ひらがな2文字です。", "explanation": "やくは、おしべの先にある花粉の入った袋です。", "exp": 10},
+  {"id": 2, "section": "花のつくり", "type": "text", "text": "花粉がつく、めしべの先の部分Bを何といいますか。", "qImg": "data:image/jpeg;base64,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", "answers": ["柱頭", "ちゅうとう"], "hint": "「ちゅう…」と読みます。", "explanation": "柱頭（ちゅうとう）はめしべの先で、花粉がつきやすいようにねばねばしていることが多いです。", "exp": 10},
+  {"id": 3, "section": "花のつくり", "type": "text", "text": "めしべのもとのふくらんだ部分Cを何といいますか。成長すると果実（実）になります。", "qImg": "data:image/jpeg;base64,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", "answers": ["子房", "しぼう"], "hint": "「し…」と読みます。", "explanation": "子房（しぼう）は受粉のあと成長して果実（実）になります。", "exp": 10},
+  {"id": 4, "section": "花のつくり", "type": "text", "text": "めしべのもとのふくらんだ部分の中にある、小さな粒のような部分を何といいますか。成長すると種子になります。", "answers": ["胚珠", "はいしゅ"], "hint": "「はい…」と読みます。", "explanation": "胚珠（はいしゅ）は受粉・受精のあと成長して種子になります。【受験ポイント】「子房→果実、胚珠→種子」をセットで覚えよう。", "exp": 10},
+  {"id": 5, "section": "花のつくり", "type": "text", "text": "花粉がめしべの先につくことを何といいますか。", "answers": ["受粉", "じゅふん"], "hint": "花粉を「受ける」と書きます。", "explanation": "受粉（じゅふん）すると、子房が実になり、胚珠が種子になります。", "exp": 10},
+  {"id": 6, "section": "花のつくり", "type": "text", "text": "アブラナやサクラのように、めしべ・おしべ・花びら・がくの4つの要素がすべてそろっている花を何といいますか。", "answers": ["完全花", "かんぜんか"], "hint": "「完全」にそろった花です。", "explanation": "完全花（かんぜんか）は4つの要素がそろった花です。どれかが欠けている花を不完全花といいます。", "exp": 10},
+  {"id": 7, "section": "花のつくり", "type": "text", "text": "ヘチマやカボチャのように、おしべだけの花と、めしべだけの花に分かれている花を何といいますか。", "answers": ["単性花", "たんせいか"], "hint": "おばな・めばなに分かれています。", "explanation": "単性花（たんせいか）は、おばなとめばなに分かれている花です。トウモロコシやマツも単性花です。", "exp": 10},
+  {"id": 8, "section": "花のつくり", "type": "text", "text": "アブラナやサクラのように、花びらが1枚ずつ分かれて独立している花を何といいますか。", "answers": ["離弁花", "りべんか"], "hint": "花びらが「離れて」いる花です。", "explanation": "離弁花（りべんか）は花びらが1枚ずつ分かれている花です。", "exp": 10},
+  {"id": 9, "section": "花のつくり", "type": "text", "text": "アサガオやツツジのように、花びらのもとがくっついている花を何といいますか。", "answers": ["合弁花", "ごうべんか"], "hint": "花びらが「合わさって」いる花です。", "explanation": "合弁花（ごうべんか）は花びらのもとがくっついている花です。", "exp": 10},
+  {"id": 10, "section": "花のつくり", "type": "choice", "text": "花びらのもとがくっついている花（合弁花）をもつ植物はどれですか。", "choices": ["エンドウ", "タンポポ", "モモ"], "answer": "タンポポ", "explanation": "タンポポ・アサガオ・ツツジ・ヒマワリなどが合弁花です。エンドウやモモは離弁花です。", "exp": 10},
+  {"id": 11, "section": "植物の分類", "type": "text", "text": "イヌワラビやゼニゴケのように種子をつくらない植物は、何でなかまをふやしますか。", "answers": ["胞子", "ほうし"], "hint": "「ほう…」と読みます。", "explanation": "シダ植物やコケ植物は、種子ではなく胞子（ほうし）でふえます。", "exp": 10},
+  {"id": 12, "section": "植物の分類", "type": "text", "text": "種子をつくらない植物のうち、イヌワラビのように根・茎・葉の区別があるなかまを何植物といいますか。", "answers": ["シダ植物", "シダ", "しだしょくぶつ"], "hint": "カタカナ2文字＋植物です。", "explanation": "シダ植物は根・茎・葉の区別があり、胞子でふえます。", "exp": 10},
+  {"id": 13, "section": "植物の分類", "type": "text", "text": "マツやイチョウのように、胚珠がむき出しになっている植物を何植物といいますか。", "answers": ["裸子植物", "らししょくぶつ"], "hint": "「裸（はだか）」の字が入ります。", "explanation": "裸子植物（らししょくぶつ）は子房がなく、胚珠がむき出しです。", "exp": 10},
+  {"id": 14, "section": "植物の分類", "type": "text", "text": "アブラナやイネのように、胚珠が子房の中に包まれている植物を何植物といいますか。", "answers": ["被子植物", "ひししょくぶつ"], "hint": "「被（おおう）」の字が入ります。", "explanation": "被子植物（ひししょくぶつ）は胚珠が子房に包まれています。", "exp": 10},
+  {"id": 15, "section": "植物の分類", "type": "text", "text": "被子植物は子葉の枚数などで2つのグループに分けられます。子葉が2枚のグループを何類といいますか。", "answers": ["双子葉類", "そうしようるい"], "hint": "「双」は2つという意味です。", "explanation": "双子葉類（そうしようるい）は子葉が2枚のなかまで、アサガオ・ヘチマ・ホウセンカなどがあります。", "exp": 10},
+  {"id": 16, "section": "植物の分類", "type": "choice", "text": "子葉が2枚のグループ（双子葉類）の根のつくりはどのようになっていますか。", "choices": ["太い主根と、細い側根からなる", "たくさんのひげ根からなる"], "answer": "太い主根と、細い側根からなる", "explanation": "双子葉類の根は主根と側根、単子葉類の根はひげ根です。", "exp": 10},
+  {"id": 17, "section": "植物の分類", "type": "choice", "text": "子葉が2枚のグループ（双子葉類）の葉脈のつくりはどのようになっていますか。", "choices": ["平行", "あみの目"], "answer": "あみの目", "explanation": "双子葉類の葉脈はあみの目状、単子葉類は平行です。", "exp": 10},
+  {"id": 18, "section": "植物の分類", "type": "choice", "text": "子葉が2枚のグループ（双子葉類）の茎の維管束の並び方はどのようになっていますか。", "choices": ["輪のように並んでいる", "全体に散らばっている"], "answer": "輪のように並んでいる", "explanation": "双子葉類の維管束は輪のように並び、単子葉類は全体に散らばっています。【受験ポイント】「子葉・根・葉脈・維管束」の4つのちがいを表にして覚えよう。", "exp": 10},
+  {"id": 19, "section": "植物の分類", "type": "choice", "text": "子葉が1枚のグループ（単子葉類）にあてはまる植物はどれですか。", "choices": ["トウモロコシ", "ヘチマ", "ホウセンカ"], "answer": "トウモロコシ", "explanation": "単子葉類にはトウモロコシ・イネ・ユリ・ツユクサなどがあります。", "exp": 10},
+  {"id": 20, "section": "植物の分類", "type": "text", "text": "スギゴケやゼニゴケのように、根・茎・葉の区別がない植物を何植物といいますか。", "answers": ["コケ植物", "コケ", "こけしょくぶつ"], "hint": "カタカナ2文字＋植物です。", "explanation": "コケ植物は根・茎・葉の区別がなく、からだ全体で水を吸収します。根のように見えるのは「仮根（かこん）」です。", "exp": 10},
+  {"id": 21, "section": "受粉と受精", "type": "text", "text": "受粉のあと、図のAの部分が胚珠に向かってのびていきます。この部分を何といいますか。", "qImg": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCABVASoDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD1+4gaZY9jhWjcMNy7geCORkev54p0QmG7zpEfn5diFcD8zmpaKAIYLdbfzArORI5fDHOCeoHtnn8aWaBZoTESygnOUOCDnOfzqWigBGUMMMARnPNZ2r2l9exLBazRxRvxIXGSBkdBjnjPcVpUUAQ232j7Ov2ry/O53GLO088EZ5HGOP51EthEupm+AIkMZT7xwckZ46fwrzVuigCG4haVVZGAkjy0e4ZXdggEjv19adDH5UKoTuI+8cYye5/OpKKAILZbhfM+0OrZkJTb2XtU9FFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFMaWNPvOo+ppguYiu4Mceu00ATUUyOWOVd0bqw9QafQAUUUUAFFFFABRRRQAUUUUAFFFVbm62MYYmXzSM89F/wDr+3tQBYZ1RSzEKo5JJwBVWXU4E+4Gm458vGB+JIFZuzfIrSkyEcEsxzn+n4fhUgYnjcWOOp/wNAFoalISNtrwe5fp+lK19IpAKxDJxyx9PpVYNtBOzGehJzg5/wA/lTSW2l8nHXax4GPw4/GgC3HqQ3qsqBQ38StkD0zV+ueuFZ1EAjLvL8qjcAPxx2654rfQbUVSScDGT3oAdRRRQAUUhIHU0ZoAWikUhlDA5BpaACiiigAooqneXRRvJiYB2HLH+H/69AFmSaOIZkdUHucVUk1NBL5cULyAHBfov596qNFmXzDGjFhy5+Zu3vTm3DopJ+lAE7X1xtz5KJ6kvn/Cohf3bHAVMAnkISOv1puWCspUFcZ55qMphSFRQOhwaAJ21WSHJlt9yDksh5A+lWmuHKbkRUB4BlJGT9KyyskimNPmaXooOcdevpWxDbQ26hY0xgYBJJP5mgCtJcXJIaKOR+fuqgHv1Y45/wA4oW2uXQb5GBPX96f5Y/rV6loApx2bqmA6IcdUTkfjUwtlDMwkkDMc53Zx9B0qaigCs1u7Nuba5A4PKnP1FN82aLd5uAAQAT0P41NcTCGPOCWY7UUdz/n+VR28LI5LOX4wzN3Of0AoAetwhYK3ys3TPQ/Q9DUtRSQ55QL7qw4P+fWo1M0fzKhZSRmNm+ZfUg9/pQBaopqOrjKnIp1ABRRRQAUUUUAFYu8+dKrsA5c9eo9x7VtVDNawXGDLErlehI5H40AZbkFkA3cnGcnnihtg++6A4yCzAYH40so03ftjt5Lgg7SVY7QeeMk4/KkmlMJUw2lshCD7y7iDjp26dKAImLSKrRRSTZ+60Yyp59frViPTbuRVLyLAeM7OW/pVU/aWy013MQCCQuUGPw9v50ht4GBWUOzDGN+fSgDdit4oR8iAHnk8nk561JXP+XDHEFRSuckBZCuOOv8AP8qnsb0wzLEZ2njZsfMdzLngHPoT/OgDaooooAilZg0eANpb5iT09P1xUSr/AMTKQhm/1S5BPHU1YZQ64PSlI4+tAENnuFuAwIwzDn0BNT1iR+KNKj199AeTyLmNNyB8BZBjJ2n2HXNbVAC0UUUAFY9yqLdurna5JYAk/Nxxj+WK2KY8aSKVdVYejDNAGOODvwNoPTd0przxqMGRAcA4DHn8f1/Cp5ZbASMkFjHMwOC3lgKD164/lUZu5mU+WLeEpnJVNxX6E4/UUARgyXYzawsy9Mq2FB6Hqfr61M2nyP8A8fF0sAz0jbn8zURUz7jLdzSbcZG4qvHsPz/GoxDbc4hhXqQVXng8/wCTQBtW4t4kCxMhwMZDAkgf/rqaudVLcjaIYmI9Bk/lSwXa2EivE++HISRd/Ck/xex/mKAOioqlFfCQg+dbkE4IVsjjrhu+B7VN9rjUfvSYucZcYH59KAJ6KaZFC7iwA9c1Umvl2712/ZwDum3DB9lHc0ASq5kkYhh0IUDnocE/nUyKEQKOgGKhtkXHmjZtYfu9nQL2x/P/APVVigAqOaJJVw46dD3HvUlRyDcNgON3XHpQBXCSCISTBSyjIdFJb8h1/CnwXXmS+W23JUshU/eAxnI6g8jirFJsXfv2jdjGcc4oAdRRRQAUUUUAFVdQMgtG8tip4BI64zzVqkZQylWAIPBB70AYSQBWX5QCAOFBAxjildTGmSoBzwWOf51ek01iwMVwyKfvKyhsj0B7frURsL3eCskHHcg5PGPpQBDHwoyQCfT/AD/KnJy/lhQ2DwO4/I1OumymMq04U9gq8D8Kf/ZcbKN8spPchsZoApuFUBlUryeW75otYPtsiSKHWJZA29v4gMEAfjWgunWqncYhIcDmQ7v51ZAAGAMCgBa5f4iatqGieD7nUNMcJPEy5JGflJwfp/kd66isLxj4ek8UeG7jSo51gaUqQ7rkcHPSgDwtvin4veQbdSK9yoUY/l06cUN8TvGDspbV9uBkhQozx/8AXrqP+FE37Ak6xaIeoAhY/rn9aH+BWoM+U1q2RR0Uxs368fyoA87v9b1DVb031zdPJckBiwYggDj8P/r/AIV3/g74sXOn+XZa08l1Eqgb1wWQZwOMDOfl7nOSfaub1b4e6xZeJ30Sxha7YhWSREJCBv7xHQdee9el+BvhTa6Gq3ussl5eFeIgMxx56jBzk9eeOvSgD0CyvYNQtI7u2ffDKu5W9RU9IqhRhQAB2FLQAVXvWZLSRgcYGST2Hf8ATNWKQjIxQBjRwxpASoVo8feTPA7fh+NOJVQFZG3KOfm5FW30uAn920kQznajfL+RyB17VXOk3I4ivEVfRoSePT7woAaSrgrsx059uDj8qYyxb+EbI9+QR1/lVyPTmC4kuGbJydqhc+vr3oXSoNuJGllJ7tIRx6cYoAzZXjUFkLDGA3I7/wCIqW0shdmNzGfJzuLEg7yDxj29fwrTSytUAAgTgYBIyfzNT0ANWKNECJGqqvRQMAUz7OoBCkgE5IJyP1qaigCoLVzLvbygcYLLH8x9eak+yxnbvy+3oG6D8OlT0UARRARnyVUhQPl9MVLTJFJXK5yORg9falRw6hgeDQA6mKdxJHToKJS2whDhiML9aVVCqFHQDFADqKKKACiiigAooooAKKKhnuY7cDeTlvuqBkmgCaisuTVJ/MZY4VRR3kyfx47UxtQvQxwbfA7FG9fXNAGvRWOuq3SH54o5Mg4CZX+dWF1iHjzI5Ixjrjdz+GaANCio4p4phmORW+hqSgAooooAKKKKAI1giSZ5ljUSOAGfHJA6c1JRRQAUUUlADEnjkcorgsvJHepKzZVZb1Wj3MiZ+ZQSUJ9f7wP5ilXUmhZ1n2yMMbRCpDH6qen50AaNJWU2oXjsSiwRJngOCxPrnBwPzNO+03GQftIx1wYhj+dAGpSVkz399C37trWRc8hlZD+eTU0WqHB8+BlweqfMD/X1/KgDRoqC3vLe6z5MgYjquMEfUGp6ACiiigAooooAKaBgnHQ806q19cNBbny2QSudse7uf880ATldzgkfd5H1p1VrC6F1aq+4F1+WQYxtYdRVmgAooooAKKKKACiiigArHv3zfMhH8IX8OtFFAEC/NgEtkjrnpTUUHKgsBjPJz1oooATOCB13EA559KbnaQRnJI6nI/I0UUARmYxfvoxtdOcg9cY6+tdNG26NWPcA0UUAOooooAKKKKACiiigApjk8KDjPeiigBwGBis69jzcs+SDtUfz/wAKKKAKsibXX5ic/wCP+FSbdzMB2GTu5zyaKKAInfhVP8WBkHpzTWxHgckO3cnI/H8aKKAGsCVLBirZBVh1U4xx6VuW8hlt45CMF0DH8RRRQBLRRRQAUUUUAFVbmwhu54pJxvWLOEPKknuaKKAFt7KK1mlkhG1ZcEoOgIzyP0/KrNFFABRRRQAUUUUAf//Z", "answers": ["花粉管", "かふんかん"], "hint": "花粉から出る「管（くだ）」です。", "explanation": "花粉管（かふんかん）は、柱頭についた花粉から胚珠に向かってのびる管です。", "exp": 10},
+  {"id": 22, "section": "受粉と受精", "type": "text", "text": "花粉から胚珠に向かってのびる管の中を通った精細胞が、胚珠の中にある卵細胞と結びつくことを何といいますか。", "answers": ["受精", "じゅせい"], "hint": "「精」を「受ける」と書きます。", "explanation": "受精（じゅせい）によって、胚珠が種子に、子房が果実に成長していきます。", "exp": 10},
+  {"id": 23, "section": "受粉と受精", "type": "text", "text": "精細胞と卵細胞が結びつく受精が行われたあと、胚珠は成長して何になりますか。", "answers": ["種子", "しゅし", "たね"], "hint": "「たね」のことです。", "explanation": "受精したあと、胚珠は種子になります。", "exp": 10},
+  {"id": 24, "section": "受粉と受精", "type": "text", "text": "精細胞と卵細胞が結びつく受精が行われたあと、子房は成長して何になりますか。", "answers": ["果実", "実", "かじつ", "み"], "hint": "食べられる部分になることが多いです。", "explanation": "子房は果実（実）になります。", "exp": 10},
+  {"id": 25, "section": "受粉と受精", "type": "text", "text": "アサガオやイネなどの植物にみられる、自分の花の花粉がその花のめしべについて受粉することを何といいますか。", "answers": ["自家受粉", "じかじゅふん"], "hint": "「自分の家」と書きます。", "explanation": "自家受粉（じかじゅふん）は同じ花や同じ株の花粉で受粉することです。アサガオはつぼみのうちに受粉します。", "exp": 10},
+  {"id": 26, "section": "受粉と受精", "type": "text", "text": "ヘチマやカボチャなどの植物にみられる、別の株の花粉がめしべについて受粉することを何といいますか。", "answers": ["他家受粉", "たかじゅふん"], "hint": "「他の家」と書きます。", "explanation": "他家受粉（たかじゅふん）は別の株の花粉で受粉することです。", "exp": 10},
+  {"id": 27, "section": "受粉と受精", "type": "text", "text": "トウモロコシやマツのように、風によって花粉が運ばれる花を何といいますか。", "answers": ["風ばい花", "風媒花", "ふうばいか"], "hint": "「風」が「なかだち」をする花です。", "explanation": "風ばい花（風媒花）の花は目立たず、軽くて小さな花粉を大量につくります。虫が運ぶ花は「虫ばい花」です。", "exp": 10},
+  {"id": 28, "section": "受粉と受精", "type": "choice", "text": "図は2種類の花粉のようすです。トウモロコシやマツのように、風によって花粉が運ばれる花の花粉の特徴として正しいものはどちらですか。", "qImg": "data:image/jpeg;base64,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", "choices": ["ア", "イ"], "answer": "ア", "ordered": true, "explanation": "風で運ばれる花粉は軽く、マツの花粉には空気袋がついています（ア）。", "exp": 10},
+  {"id": 29, "section": "受粉と受精", "type": "choice", "text": "図は2種類の花粉のようすです。カボチャやヘチマのように、虫によって花粉が運ばれる花の花粉の特徴として正しいものはどちらですか。", "qImg": "data:image/jpeg;base64,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", "choices": ["ア", "イ"], "answer": "イ", "ordered": true, "explanation": "虫で運ばれる花粉は、虫のからだにくっつきやすいように、とげやねばり気があります（イ）。", "exp": 10},
+  {"id": 30, "section": "生物のふえ方", "type": "text", "text": "生物が、自分と同じ種類のなかまをふやすはたらきを何といいますか。", "answers": ["生殖", "せいしょく"], "hint": "「せい…」と読みます。", "explanation": "生殖（せいしょく）は、生物が子孫をふやすはたらきです。", "exp": 10},
+  {"id": 31, "section": "生物のふえ方", "type": "text", "text": "受精によって子をつくるふえ方を何といいますか。", "answers": ["有性生殖", "ゆうせいせいしょく"], "hint": "おすとめすの「性」が関係します。", "explanation": "有性生殖（ゆうせいせいしょく）は、受精によって親の特徴を両方から受けつぐふえ方です。", "exp": 10},
+  {"id": 32, "section": "生物のふえ方", "type": "text", "text": "受精によらず、親のからだの一部から新しいなかまができるふえ方を何といいますか。", "answers": ["無性生殖", "むせいせいしょく"], "hint": "受精が「無い」ふえ方です。", "explanation": "無性生殖（むせいせいしょく）では、親とまったく同じ性質の子ができます。", "exp": 10},
+  {"id": 33, "section": "生物のふえ方", "type": "text", "text": "ミカヅキモなどのように、からだが2つ以上に分かれてふえるふえ方を何といいますか。", "answers": ["分裂", "ぶんれつ"], "hint": "「分」かれて「裂」けます。", "explanation": "分裂（ぶんれつ）はミカヅキモ・ゾウリムシなどにみられるふえ方です。", "exp": 10},
+  {"id": 34, "section": "生物のふえ方", "type": "text", "text": "コウボキンなどのように、からだの一部がふくらんで分かれてふえるふえ方を何といいますか。", "answers": ["出芽", "しゅつが"], "hint": "「芽」が「出る」ように分かれます。", "explanation": "出芽（しゅつが）はコウボキンやヒドラにみられるふえ方です。", "exp": 10},
+  {"id": 35, "section": "生物のふえ方", "type": "text", "text": "植物で、根・くき・葉などから新しいからだをつくるふえ方を何といいますか。", "answers": ["栄養生殖", "えいようせいしょく"], "hint": "「栄養」をたくわえた部分からふえます。", "explanation": "栄養生殖（えいようせいしょく）には、ジャガイモ（くき）、サツマイモ（根）、さし木などがあります。", "exp": 10},
+  {"id": 36, "section": "生物のふえ方", "type": "choice", "text": "ジャガイモは植物のどの部分を使って、根・くき・葉などから新しいからだをつくるふえ方をしますか。", "choices": ["根", "くき", "葉"], "answer": "くき", "explanation": "ジャガイモのいもは地下のくき（地下茎）が太ったものです。", "exp": 10},
+  {"id": 37, "section": "生物のふえ方", "type": "text", "text": "受精によるふえ方では親とちがう特徴をもつ子ができることがあります。この性質を利用して行われる、より良い農作物などをつくり出すことを何といいますか。", "answers": ["品種改良", "ひんしゅかいりょう"], "hint": "「品種」を「改良」します。", "explanation": "品種改良（ひんしゅかいりょう）は、よい性質をもつものどうしをかけ合わせて、新しい品種をつくることです。", "exp": 10},
+  {"id": 38, "section": "生物のふえ方", "type": "text", "text": "受精によらないふえ方でできた、親とまったく同じ遺伝子や特徴をもつなかまを何といいますか。カタカナで答えなさい。", "answers": ["クローン"], "hint": "カタカナ4文字です。", "explanation": "クローンは、親とまったく同じ遺伝子をもつ個体のことです。", "exp": 10},
+  {"id": 39, "section": "生物のふえ方", "type": "choice", "text": "おいしい品種の農作物を、その特徴を変えずに大量にふやしたい場合、適しているのはどちらのふえ方ですか。", "choices": ["有性生殖", "無性生殖"], "answer": "無性生殖", "explanation": "無性生殖では親と同じ性質の子ができるので、よい特徴をそのままふやせます。", "exp": 10}
+];
+
+// 前の問題の答えが次の問題文に出てくる問題などは、まとめて決まった順番で出す（まとまり同士・その他はランダム）
+const ORDER_GROUPS = [[9, 10], [15, 16, 17, 18], [22, 23, 24], [5, 25, 26], [31, 32, 39]];
+function orderQuestions(list){
+  const byId={}; list.forEach(q=>byId[q.id]=q);
+  const used=new Set(); const units=[];
+  ORDER_GROUPS.forEach(g=>{const u=g.map(id=>byId[id]).filter(Boolean); u.forEach(q=>used.add(q.id)); if(u.length) units.push(u);});
+  list.forEach(q=>{ if(!used.has(q.id)) units.push([q]); });
+  for(let i=units.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [units[i],units[j]]=[units[j],units[i]];}
+  return units.flat();
+}
+
+
+let questions=[], currentIndex=0, correctCount=0, wrongCount=0, answered=false, results=[];
+
+function startQuiz(questionSet){
+  const isReview=!!questionSet;
+  questions=questionSet||orderQuestions(ALL_QUESTIONS);
+  currentIndex=0; correctCount=0; wrongCount=0; results=[]; answered=false; exp=0;
+  if(!isReview) earnedTitles=[];
+  document.getElementById('intro-screen').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  document.getElementById('hud').style.display='block';
+  updateHUD(); renderQuestion();
+  /* 開始時の称号演出は廃止（称号は5割/8割/全問で獲得） */
+}
+
+function renderQuestion(){
+  const q=questions[currentIndex];
+  answered=false;
+  const card=document.getElementById('q-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  document.getElementById('q-section').textContent='🌸 植物のつくりとふえ方';
+  document.getElementById('q-num').textContent=`${currentIndex+1}問目 ／ ${questions.length}問`;
+  document.getElementById('q-text').textContent=q.text;
+  document.getElementById('q-image').innerHTML = q.qImg ? '<img src="'+q.qImg+'" alt="" style="max-width:100%;max-height:240px;border-radius:8px;margin:10px auto 0;display:block;border:1px solid rgba(74,38,112,0.2);">' : '';
+  const tb=document.getElementById('q-type-badge');
+  if(q.type==='choice'){ tb.textContent='選択'; tb.className='q-type-badge choice'; }
+  else{ tb.textContent='記述'; tb.className='q-type-badge text'; }
+  const fb=document.getElementById('feedback');
+  fb.className='feedback'; fb.innerHTML='';
+  document.getElementById('next-btn').style.display='none';
+  const choicesWrap=document.getElementById('choices-wrap');
+  const textWrap=document.getElementById('text-input-wrap');
+  choicesWrap.innerHTML=''; textWrap.style.display='none';
+  if(q.type==='choice'){
+    renderChoices(q,choicesWrap);
+  } else {
+    textWrap.style.display='block';
+    const input=document.getElementById('text-ans');
+    input.value=''; input.className=''; input.disabled=false;
+    const hintBtn=document.getElementById('hint-btn');
+    const hintBox=document.getElementById('hint-box');
+    hintBox.textContent=''; hintBox.classList.remove('show');
+    if(q.hint){ hintBtn.style.display=''; hintBtn.disabled=false; hintBtn.textContent='💡 ヒントを見る'; }
+    else{ hintBtn.style.display='none'; }
+    document.getElementById('submit-btn').disabled=false;
+    setTimeout(()=>input.focus(),100);
+    input.onkeydown=e=>{ if(e.key==='Enter') submitText(); };
+  }
+  updateProgress();
+}
+
+function renderChoices(q,wrap){
+  const div=document.createElement('div');
+  div.className='choices';
+  const list=q.ordered?[...q.choices]:[...q.choices].sort(()=>Math.random()-0.5);
+  list.forEach(ch=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn'; btn.textContent=ch;
+    btn.onclick=()=>selectChoice(btn,ch,q);
+    div.appendChild(btn);
+  });
+  wrap.appendChild(div);
+}
+
+function selectChoice(btn,choice,q){
+  if(answered) return;
+  answered=true;
+  const isCorrect=(choice===q.answer);
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===q.answer){ b.classList.add('show-ans'); b.innerHTML+=`<span class="c-icon">✅</span>`; }
+  });
+  if(!isCorrect){ btn.classList.remove('show-ans'); btn.classList.add('wrong'); btn.innerHTML=btn.textContent.replace('<span class="c-icon">✅</span>','')+`<span class="c-icon">❌</span>`; }
+  else{ btn.classList.add('correct'); }
+  processAnswer(isCorrect,choice,q);
+}
+
+function showHint(){
+  const q=questions[currentIndex];
+  const hb=document.getElementById('hint-box');
+  hb.textContent=`💡 ヒント：${q.hint}`; hb.classList.add('show');
+  document.getElementById('hint-btn').disabled=true;
+  document.getElementById('hint-btn').textContent='💡 ヒントを見た';
+}
+
+function submitText(){
+  if(answered) return;
+  const q=questions[currentIndex];
+  const input=document.getElementById('text-ans');
+  const userAns=input.value.trim();
+  if(!userAns){ input.style.borderColor='orange'; setTimeout(()=>input.style.borderColor='',600); return; }
+  answered=true;
+  document.getElementById('submit-btn').disabled=true;
+  input.disabled=true;
+  const norm=s=>s.replace(/\s|　/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase();
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const isCorrect=correctList.some(a=>norm(userAns)===norm(a));
+  input.className=isCorrect?'correct':'wrong';
+  processAnswer(isCorrect,userAns,q);
+}
+
+function processAnswer(isCorrect,userAns,q){
+  if(isCorrect){ correctCount++; document.getElementById('hud-ok').textContent=correctCount; }
+  else{ wrongCount++; document.getElementById('hud-ng').textContent=wrongCount; }
+  results.push({q,isCorrect,userAnswer:userAns});
+  const gained=isCorrect?q.exp:Math.floor(q.exp*0.2);
+  addExp(gained);
+  showFeedback(isCorrect,q,gained);
+  document.getElementById('next-btn').style.display='block';
+}
+
+function showFeedback(isCorrect,q,gained){
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(isCorrect?'correct':'wrong')+' show';
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const answerDisp=correctList[0];
+  fb.innerHTML=`
+    <div class="fb-title">${isCorrect?'🎉 正解！':`❌ 不正解… 正解は「${answerDisp}」`}</div>
+    <div class="fb-exp">${isCorrect?`✨ +${gained} EXP 獲得！`:`💧 +${gained} EXP（参加ポイント）`}</div>
+    <div class="fb-explain">📖 ${q.explanation}</div>
+  `;
+}
+
+function nextQuestion(){
+  if(currentIndex+1>=questions.length) showResult();
+  else{ currentIndex++; renderQuestion(); }
+}
+
+function updateProgress(){
+  const pct=(currentIndex/questions.length)*100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-label').textContent=`${currentIndex}/${questions.length}`;
+}
+
+function showResult(){
+  document.getElementById('quiz-screen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('result-screen').style.display='block';
+  const total=questions.length; const pct=correctCount/total; const lv=getLevel(exp);
+  let emoji,stars,msg;
+  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！「'+lv.title+'」になった！✨'; }
+  else if(pct>=0.8) { emoji='😄'; stars='⭐⭐';   msg='よくできた！あと少しで満点。間違えた問題を確認しよう！'; }
+  else if(pct>=0.5) { emoji='😊'; stars='⭐';     msg='がんばった！半分以上正解。復習してもう一度挑戦！'; }
+  else              { emoji='💪'; stars='';        msg='まだ覚えていないところがあるね。一つずつ確認しよう！'; }
+  document.getElementById('res-emoji').textContent=emoji;
+  document.getElementById('res-stars').textContent=stars;
+  document.getElementById('res-score').innerHTML=`${correctCount}<span> / ${total}問正解</span>`;
+  document.getElementById('res-msg').textContent=msg;
+  document.getElementById('res-level').textContent=`Lv.${lv.lv}`;
+  document.getElementById('res-exp').textContent=exp;
+  document.getElementById('res-pct').textContent=Math.round(pct*100)+'%';
+
+  const newTitles=TITLES.filter(t=>t.id!=='start'&&!earnedTitles.includes(t.id)&&t.cond(results.map(r=>r.isCorrect),correctCount,wrongCount));
+  newTitles.forEach(t=>earnedTitles.push(t.id));
+  const topTitle=[...TITLES].reverse().find(t=>earnedTitles.includes(t.id));
+  document.getElementById('res-title-disp').textContent=`${lv.emoji} ${lv.title}`;
+
+  const grid=document.getElementById('tc-grid');
+  grid.innerHTML='';
+  TITLES.forEach(t=>{
+    const span=document.createElement('span');
+    span.className='tc-badge '+(earnedTitles.includes(t.id)?'earned':'locked');
+    span.textContent=earnedTitles.includes(t.id)?`${t.emoji} ${t.name}`:'🔒 ???';
+    span.title=earnedTitles.includes(t.id)?t.desc:'未獲得';
+    grid.appendChild(span);
+  });
+
+  const tbody=document.getElementById('res-tbody');
+  tbody.innerHTML='';
+  results.forEach((r,i)=>{
+    const shortQ=r.q.text.length>20?r.q.text.slice(0,20)+'…':r.q.text;
+    const correctDisp=Array.isArray(r.q.answers)?r.q.answers[0]:r.q.answer;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td class="q-cell"></td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td><td class="exp-cell"></td>`;
+    const qCell=tr.querySelector('.q-cell');
+    qCell.textContent=shortQ;
+    qCell.onclick=()=>openQaPopup(r.q.text, r.q.qImg||'');
+    if(r.q.explanation){
+      const correctList=Array.isArray(r.q.answers)?r.q.answers.join(' / '):r.q.answer;
+      const b=document.createElement('button'); b.className='exp-col-btn'; b.textContent='解説';
+      b.onclick=()=>openQaPopup('正解：'+correctList+'\n\n'+r.q.explanation, r.q.expImg||'');
+      tr.querySelector('.exp-cell').appendChild(b);
+    }
+    tbody.appendChild(tr);
+  });
+  document.getElementById('review-btn').style.display=results.some(r=>!r.isCorrect)?'block':'none';
+  if(newTitles.length>0){ setTimeout(()=>{ showTitleOverlay(newTitles[newTitles.length-1]); },800); }
+}
+
+function toggleExp(btn){
+  const expTr=btn._expTr;
+  const isShown=expTr.style.display!=='none';
+  expTr.style.display=isShown?'none':'table-row';
+  btn.textContent=isShown?'💡 解説を見る':'💡 解説を閉じる';
+}
+
+function restartQuiz(){
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('intro-screen').style.display='flex';
+  document.getElementById('intro-screen').style.flexDirection='column';
+  document.getElementById('intro-screen').style.alignItems='center';
+}
+
+function reviewWrong(){
+  const wrong=results.filter(r=>!r.isCorrect).map(r=>r.q);
+  if(wrong.length>0) startQuiz(wrong);
+}
+</script>
+<div id="qa-popup" onclick="closeQaPopup()">
+  <div class="qa-popup-box" onclick="event.stopPropagation()">
+    <div class="qa-popup-text" id="qa-popup-text"></div>
+    <button class="qa-popup-close" onclick="closeQaPopup()">✕ 閉じる</button>
+  </div>
+</div>
+<script>
+function openQaPopup(t,img){ var b=document.getElementById('qa-popup-text'); b.textContent=t; if(img){ var im=document.createElement('img'); im.src=img; im.style.cssText='width:100%;border-radius:6px;margin-top:10px;'; b.appendChild(im); } document.getElementById('qa-popup').classList.add('show'); }
+function closeQaPopup(){ document.getElementById('qa-popup').classList.remove('show'); }
+</script>
+<script>/* itag-fit */(function(){function fit(){document.querySelectorAll('.itag').forEach(function(e){e.style.fontSize='';var s=parseFloat(getComputedStyle(e).fontSize);while(e.scrollWidth>e.clientWidth&&s>8){s-=0.5;e.style.fontSize=s+'px';}});}window.addEventListener('load',fit);window.addEventListener('resize',fit);if(document.fonts)document.fonts.ready.then(fit);})();</script>
+</body>
+</html>
